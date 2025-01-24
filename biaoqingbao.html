@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表情包生成器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .emotion-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .emotion-tag {
+            background-color: #e9ecef;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            color: #495057;
+        }
+        .emotion-tag:hover {
+            background-color: #4CAF50;
+            color: white;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            white-space: nowrap;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #response {
+            margin-top: 20px;
+            text-align: center;
+            min-height: 100px;
+        }
+        .loading {
+            color: #666;
+            padding: 20px;
+        }
+        .error {
+            color: #ff4444;
+            padding: 20px;
+        }
+        .result-image {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .placeholder {
+            color: #666;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>😊 表情包生成器</h1>
+        <div class="input-group">
+            <input type="text" id="content" placeholder="输入你想要的表情包描述，比如：开心、伤心、惊讶...">
+            <button onclick="sendRequest()">生成表情包</button>
+        </div>
+        <div class="emotion-tags">
+            <button class="emotion-tag" onclick="setEmotion('开心')">开心</button>
+            <button class="emotion-tag" onclick="setEmotion('震惊')">震惊</button>
+            <button class="emotion-tag" onclick="setEmotion('疑惑')">疑惑</button>
+            <button class="emotion-tag" onclick="setEmotion('暴躁')">暴躁</button>
+            <button class="emotion-tag" onclick="setEmotion('酸了')">酸了</button>
+            <button class="emotion-tag" onclick="setEmotion('害怕')">害怕</button>
+            <button class="emotion-tag" onclick="setEmotion('期待')">期待</button>
+            <button class="emotion-tag" onclick="setEmotion('无语')">无语</button>
+            <button class="emotion-tag" onclick="setEmotion('委屈')">委屈</button>
+            <button class="emotion-tag" onclick="setEmotion('尴尬')">尴尬</button>
+            <button class="emotion-tag" onclick="setEmotion('嘚瑟')">嘚瑟</button>
+            <button class="emotion-tag" onclick="setEmotion('沮丧')">沮丧</button>
+        </div>
+        <div id="response">
+            <div class="placeholder">输入描述，点击按钮生成表情包</div>
+        </div>
+    </div>
+
+    <script>
+        function setEmotion(emotion) {
+            const input = document.getElementById('content');
+            input.value = emotion;
+        }
+
+        async function sendRequest() {
+            const content = document.getElementById('content').value;
+            const responseDiv = document.getElementById('response');
+            responseDiv.innerHTML = '<div class="loading">正在生成表情包，请稍候...</div>';
+
+            try {
+                const response = await fetch('https://biaoqingbao.weiyong-wang.workers.dev/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value);
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.trim() === '') continue;
+                        
+                        if (line.startsWith('event:conversation.message.delta')) {
+                            const nextLine = lines[lines.indexOf(line) + 1];
+                            if (nextLine && nextLine.startsWith('data:')) {
+                                try {
+                                    const jsonData = JSON.parse(nextLine.slice(5));
+                                    if (jsonData.content) {
+                                        responseDiv.innerHTML = `<img src="${jsonData.content}" 
+                                                                   alt="生成的表情包" 
+                                                                   class="result-image"
+                                                                   onerror="this.onerror=null; this.innerHTML='图片加载失败';">`;
+                                    }
+                                } catch (e) {
+                                    console.error('JSON解析错误:', e);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                responseDiv.innerHTML = `<div class="error">错误: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
