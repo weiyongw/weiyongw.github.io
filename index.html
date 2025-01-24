@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI春联生成器</title>
+    <style>
+        /* 页面样式 */
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #d81e06;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        /* 输入区域样式 */
+        .input-area {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            grid-column: 1 / -1;
+        }
+
+        input[type="text"], select {
+            padding: 12px 15px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"] {
+            flex: 2;
+        }
+
+        select {
+            flex: 1;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #d81e06;
+        }
+
+        button {
+            grid-column: 1 / -1;
+            padding: 12px 30px;
+            background-color: #d81e06;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #downloadBtn {
+            background-color: #28a745;
+            margin-top: 10px;
+            display: none;
+        }
+
+        #downloadBtn:hover {
+            background-color: #218838;
+        }
+
+        button:hover {
+            background-color: #b71c1c;
+        }
+
+        /* 响应区域样式 */
+        #response {
+            background-color: #fff9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #ffe4e4;
+            min-height: 100px;
+            margin-top: 20px;
+        }
+
+        .couplet-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 400px;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .middle-text {
+            font-size: 28px;
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 30px;
+            letter-spacing: 10px;
+            background-color: #e83d4b;
+            padding: 15px 30px;
+            border-radius: 8px;
+        }
+
+        .couplet-content {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .vertical-text {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            font-size: 24px;
+            line-height: 2;
+            padding: 20px;
+            background: #e83d4b;
+            color: #000000;
+            border-radius: 8px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .couplet-image {
+            flex: 0 0 auto;
+            margin: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .couplet-image img {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .vertical-text {
+                font-size: 18px;
+                padding: 10px 15px;
+                min-height: 200px;
+            }
+
+            .middle-text {
+                font-size: 20px;
+                margin-bottom: 20px;
+                padding: 10px 20px;
+            }
+
+            .couplet-image img {
+                max-width: 200px;
+                max-height: 200px;
+            }
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading:after {
+            content: "生成中";
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: "生成中"; }
+            40% { content: "生成中."; }
+            60% { content: "生成中.."; }
+            80% { content: "生成中..."; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI春联生成器</h1>
+        <div class="input-area">
+            <div class="input-group">
+                <input type="text" id="messageInput" placeholder="请输入您想要的春联主题...">
+                <select id="coupletType">
+                    <option value="七言春联">七言春联</option>
+                    <option value="长联">长联</option>
+                </select>
+            </div>
+            <button onclick="sendMessage()" id="generateBtn">生成春联</button>
+            <button onclick="downloadImage()" id="downloadBtn">下载春联图片</button>
+        </div>
+        <div class="loading" id="loading"></div>
+        <div id="response"></div>
+    </div>
+
+    <!-- 添加 html2canvas 库 -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
+    <script>
+        async function downloadImage() {
+            const response = document.getElementById('response');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const generateBtn = document.getElementById('generateBtn');
+            
+            // 禁用按钮，防止重复点击
+            downloadBtn.disabled = true;
+            generateBtn.disabled = true;
+            downloadBtn.textContent = '正在生成图片...';
+            
+            try {
+                // 使用 html2canvas 将内容转换为图片
+                const canvas = await html2canvas(response, {
+                    backgroundColor: '#fff9f9',
+                    scale: 2, // 提高图片质量
+                    useCORS: true, // 允许加载跨域图片
+                    logging: false
+                });
+
+                // 将 canvas 转换为图片 URL
+                const image = canvas.toDataURL('image/png', 1.0);
+                
+                // 创建下载链接
+                const downloadLink = document.createElement('a');
+                downloadLink.href = image;
+                downloadLink.download = '春联_' + new Date().getTime() + '.png';
+                
+                // 触发下载
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            } catch (error) {
+                console.error('生成图片失败:', error);
+                alert('生成图片失败，请重试');
+            } finally {
+                // 恢复按钮状态
+                downloadBtn.disabled = false;
+                generateBtn.disabled = false;
+                downloadBtn.textContent = '下载春联图片';
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const select = document.getElementById('coupletType');
+            const response = document.getElementById('response');
+            const loading = document.getElementById('loading');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const generateBtn = document.getElementById('generateBtn');
+            const message = input.value.trim();
+            const coupletType = select.value;
+
+            if (!message) {
+                alert('请输入春联主题');
+                return;
+            }
+
+            // 显示加载动画
+            loading.style.display = 'block';
+            // 清空之前的响应
+            response.textContent = '';
+            // 隐藏下载按钮
+            downloadBtn.style.display = 'none';
+            // 禁用生成按钮
+            generateBtn.disabled = true;
+            
+            try {
+                // 拼接输入内容和春联类型
+                const combinedMessage = `${coupletType}：${message}`;
+                
+                // 替换为你的 Worker URL
+                const workerUrl = 'https://ai-chunlian.weiyong-wang.workers.dev/';
+                const url = `${workerUrl}?data=${encodeURIComponent(combinedMessage)}`;
+                
+                const fetchResponse = await fetch(url);
+                const reader = fetchResponse.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    buffer += chunk;
+
+                    // 处理完整的事件
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop() || '';
+
+                    for (const event of events) {
+                        if (!event.trim()) continue;
+
+                        // 解析事件数据
+                        const lines = event.split('\n');
+                        const eventType = lines[0].replace('event:', '');
+                        const data = lines[1].replace('data:', '');
+
+                        // 只处理 conversation.message.delta 事件
+                        if (eventType === 'conversation.message.delta') {
+                            try {
+                                const jsonData = JSON.parse(data);
+                                if (jsonData.type === 'answer' && jsonData.content) {
+                                    try {
+                                        // 解析 content 中的 JSON 数据
+                                        const contentData = JSON.parse(jsonData.content);
+                                        // 格式化显示内容
+                                        response.innerHTML = `
+                                            <div class="couplet-container">
+                                                <div class="middle-text">${contentData.middle}</div>
+                                                <div class="couplet-content">
+                                                    <div class="vertical-text">${contentData.top}</div>
+                                                    ${contentData.pic ? `
+                                                        <div class="couplet-image">
+                                                            <img src="${contentData.pic}" alt="春联图片" crossorigin="anonymous">
+                                                        </div>
+                                                    ` : ''}
+                                                    <div class="vertical-text">${contentData.down}</div>
+                                                </div>
+                                            </div>
+                                        `;
+                                        // 显示下载按钮
+                                        downloadBtn.style.display = 'block';
+                                    } catch (e) {
+                                        // 如果不是JSON格式，直接显示内容
+                                        response.textContent = jsonData.content;
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('解析JSON数据失败:', e);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                response.textContent = `错误: ${error.message}`;
+            } finally {
+                // 隐藏加载动画
+                loading.style.display = 'none';
+                // 恢复生成按钮
+                generateBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
